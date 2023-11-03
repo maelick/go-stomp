@@ -21,6 +21,7 @@ const (
 type Subscription struct {
 	C           chan *Message
 	id          string
+	replyToSet  bool
 	destination string
 	conn        *Conn
 	ackMode     AckMode
@@ -73,6 +74,10 @@ func (s *Subscription) Unsubscribe(opts ...func(*frame.Frame) error) error {
 		if err != nil {
 			return err
 		}
+	}
+
+	if s.replyToSet {
+		f.Header.Set(ReplyToHeader, s.id)
 	}
 
 	s.conn.sendFrame(f)
