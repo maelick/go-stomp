@@ -182,6 +182,10 @@ func Connect(conn io.ReadWriteCloser, opts ...func(*Conn) error) (*Conn, error) 
 			}
 		}
 
+		if readTimeout < options.ReadTimeout {
+			readTimeout = options.ReadTimeout
+		}
+
 		c.readTimeout = readTimeout
 		c.writeTimeout = writeTimeout
 
