@@ -182,6 +182,10 @@ func Connect(conn io.ReadWriteCloser, opts ...func(*Conn) error) (*Conn, error) 
 			}
 		}
 
+		if readTimeout < options.ReadTimeout {
+			readTimeout = options.ReadTimeout
+		}
+
 		c.readTimeout = readTimeout
 		c.writeTimeout = writeTimeout
 
@@ -367,24 +371,32 @@ func processLoop(c *Conn, writer *frame.Writer) {
 
 			switch req.Frame.Command {
 			case frame.SUBSCRIBE:
-				id, _ := req.Frame.Header.Contains(frame.Id)
-				channels[id] = req.C
-
 				// if using a temp queue, map that destination as a known channel
 				// however, don't send the frame, it's most likely an invalid destination
 				// on the broker.
 				if replyTo, ok := req.Frame.Header.Contains(ReplyToHeader); ok {
 					channels[replyTo] = req.C
 					sendFrame = false
+				} else {
+					id, _ := req.Frame.Header.Contains(frame.Id)
+					channels[id] = req.C
 				}
 
 			case frame.UNSUBSCRIBE:
-				id, _ := req.Frame.Header.Contains(frame.Id)
-				// is this trying to be too clever -- add a receipt
-				// header so that when the server responds with a
-				// RECEIPT frame, the corresponding channel will be closed
-				req.Frame.Header.Set(frame.Receipt, id)
-
+				if replyTo, ok := req.Frame.Header.Contains(ReplyToHeader); ok {
+					ch, ok := channels[replyTo]
+					if ok {
+						delete(channels, replyTo)
+						close(ch)
+					}
+					sendFrame = false
+				} else {
+					id, _ := req.Frame.Header.Contains(frame.Id)
+					// is this trying to be too clever -- add a receipt
+					// header so that when the server responds with a
+					// RECEIPT frame, the corresponding channel will be closed
+					req.Frame.Header.Set(frame.Receipt, id)
+				}
 			}
 
 			// frame to send, if enabled
@@ -645,6 +657,12 @@ func (c *Conn) Subscribe(destination string, ack AckMode, opts ...func(*frame.Fr
 		}
 	}
 
+	replyTo, replyToSet := subscribeFrame.Header.Contains(ReplyToHeader)
+
+	if replyToSet {
+		subscribeFrame.Header.Set(frame.Id, replyTo)
+	}
+
 	// If the option functions have not specified the "id" header entry,
 	// create one.
 	id, ok := subscribeFrame.Header.Contains(frame.Id)
@@ -661,6 +679,7 @@ func (c *Conn) Subscribe(destination string, ack AckMode, opts ...func(*frame.Fr
 	closeMutex := &sync.Mutex{}
 	sub := &Subscription{
 		id:          id,
+		replyToSet:  replyToSet,
 		destination: destination,
 		conn:        c,
 		ackMode:     ack,
