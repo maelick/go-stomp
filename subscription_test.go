@@ -37,5 +37,5 @@ func (s *StompSuite) Test_successful_unsubscribe_with_receipt_timeout(c *C) {
 	c.Assert(sub, NotNil)
 
 	err = sub.Unsubscribe()
-	c.Assert(err, NotNil) // does not really matter as the current implementation deadlocks
+	c.Assert(err, Equals, &ErrUnsubscribeTimeout)
 }

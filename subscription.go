@@ -99,7 +99,7 @@ func (s *Subscription) Unsubscribe(opts ...func(*frame.Frame) error) error {
 	s.closeMutex.Lock()
 	for atomic.LoadInt32(&s.state) != subStateClosed {
 		err = waitWithTimeout(s.closeCond, s.unsubscribeTimeout)
-		if err != nil && !errors.Is(err, &ErrMsgReceiptTimeout) {
+		if err != nil && errors.Is(err, &ErrUnsubscribeTimeout) {
 			s.closeChannelWithErrorMessage("channel unsubscribe timeout")
 			return err
 		}
@@ -122,7 +122,7 @@ func waitWithTimeout(cond *sync.Cond, timeout time.Duration) *Error {
 	case <-waitChan:
 		return nil
 	case <-time.After(timeout):
-		return &ErrMsgReceiptTimeout
+		return &ErrUnsubscribeTimeout
 	}
 }
 
