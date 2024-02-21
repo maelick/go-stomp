@@ -28,7 +28,7 @@ func (s *StompSuite) Test_successful_unsubscribe_with_receipt_timeout(c *C) {
 		c.Assert(err, IsNil)
 	}()
 
-	client, err := Connect(fc1, ConnOpt.DisconnectReceiptTimeout(1*time.Nanosecond))
+	client, err := Connect(fc1, ConnOpt.UnsubscribeTimeout(1*time.Nanosecond))
 	c.Assert(err, IsNil)
 	c.Assert(client, NotNil)
 
