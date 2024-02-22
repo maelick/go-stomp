@@ -85,7 +85,8 @@ func (s *Subscription) Unsubscribe(opts ...func(*frame.Frame) error) error {
 
 	err := s.conn.sendFrame(f)
 	if errors.Is(err, ErrClosedUnexpectedly) {
-		s.closeChannelWithErrorMessage("connection closed unexpectedly")
+		msg := s.subscriptionErrorMessage("connection closed unexpectedly")
+		s.closeChannel(msg)
 		return err
 	}
 
@@ -100,7 +101,8 @@ func (s *Subscription) Unsubscribe(opts ...func(*frame.Frame) error) error {
 	for atomic.LoadInt32(&s.state) != subStateClosed {
 		err = waitWithTimeout(s.closeCond, s.unsubscribeTimeout)
 		if err != nil && errors.Is(err, &ErrUnsubscribeTimeout) {
-			s.closeChannelWithErrorMessage("channel unsubscribe timeout")
+			msg := s.subscriptionErrorMessage("channel unsubscribe timeout")
+			s.C <- msg
 			return err
 		}
 	}
@@ -152,13 +154,12 @@ func (s *Subscription) closeChannel(msg *Message) {
 	s.closeCond.Broadcast()
 }
 
-func (s *Subscription) closeChannelWithErrorMessage(message string) {
-	msg := &Message{
+func (s *Subscription) subscriptionErrorMessage(message string) *Message {
+	return &Message{
 		Err: &Error{
 			Message: fmt.Sprintf("Subscription %s: %s: %s", s.id, s.destination, message),
 		},
 	}
-	s.closeChannel(msg)
 }
 
 func (s *Subscription) readLoop(ch chan *frame.Frame) {
@@ -167,7 +168,8 @@ func (s *Subscription) readLoop(ch chan *frame.Frame) {
 		if !ok {
 			state := atomic.LoadInt32(&s.state)
 			if state == subStateActive || state == subStateClosing {
-				s.closeChannelWithErrorMessage("channel read failed")
+				msg := s.subscriptionErrorMessage("channel read failed")
+				s.closeChannel(msg)
 			}
 			return
 		}
