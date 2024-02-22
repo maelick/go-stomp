@@ -108,7 +108,7 @@ func (s *Subscription) Unsubscribe(opts ...func(*frame.Frame) error) error {
 	return err
 }
 
-func waitWithTimeout(cond *sync.Cond, timeout time.Duration) *Error {
+func waitWithTimeout(cond *sync.Cond, timeout time.Duration) error {
 	if timeout == 0 {
 		cond.Wait()
 		return nil
