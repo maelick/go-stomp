@@ -21,16 +21,16 @@ const (
 //
 // Once a client has subscribed, it can receive messages from the C channel.
 type Subscription struct {
-	C                  chan *Message
-	id                 string
-	replyToSet         bool
-	destination        string
-	conn               *Conn
-	ackMode            AckMode
-	state              int32
-	closeMutex         *sync.Mutex
-	closeCond          *sync.Cond
-	unsubscribeTimeout time.Duration
+	C                         chan *Message
+	id                        string
+	replyToSet                bool
+	destination               string
+	conn                      *Conn
+	ackMode                   AckMode
+	state                     int32
+	closeMutex                *sync.Mutex
+	closeCond                 *sync.Cond
+	unsubscribeReceiptTimeout time.Duration
 }
 
 // BUG(jpj): If the client does not read messages from the Subscription.C
@@ -99,9 +99,9 @@ func (s *Subscription) Unsubscribe(opts ...func(*frame.Frame) error) error {
 	// wait for the terminal state transition instead.
 	s.closeMutex.Lock()
 	for atomic.LoadInt32(&s.state) != subStateClosed {
-		err = waitWithTimeout(s.closeCond, s.unsubscribeTimeout)
-		if err != nil && errors.Is(err, &ErrUnsubscribeTimeout) {
-			msg := s.subscriptionErrorMessage("channel unsubscribe timeout")
+		err = waitWithTimeout(s.closeCond, s.unsubscribeReceiptTimeout)
+		if err != nil && errors.Is(err, &ErrUnsubscribeReceiptTimeout) {
+			msg := s.subscriptionErrorMessage("channel unsubscribe receipt timeout")
 			s.C <- msg
 			return err
 		}
@@ -124,7 +124,7 @@ func waitWithTimeout(cond *sync.Cond, timeout time.Duration) error {
 	case <-waitChan:
 		return nil
 	case <-time.After(timeout):
-		return &ErrUnsubscribeTimeout
+		return &ErrUnsubscribeReceiptTimeout
 	}
 }
 

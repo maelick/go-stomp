@@ -21,7 +21,7 @@ func (s *StompSuite) Test_successful_unsubscribe_with_receipt_timeout(c *C) {
 	defer fc1.Close()
 	defer fc2.Close()
 
-	client, err := Connect(fc1, ConnOpt.UnsubscribeTimeout(1*time.Second))
+	client, err := Connect(fc1, ConnOpt.UnsubscribeReceiptTimeout(1*time.Second))
 	c.Assert(err, IsNil)
 	c.Assert(client, NotNil)
 
@@ -30,7 +30,7 @@ func (s *StompSuite) Test_successful_unsubscribe_with_receipt_timeout(c *C) {
 	c.Assert(sub, NotNil)
 
 	err = sub.Unsubscribe()
-	c.Assert(err, Equals, &ErrUnsubscribeTimeout)
+	c.Assert(err, Equals, &ErrUnsubscribeReceiptTimeout)
 	wg.Wait()
 }
 
@@ -47,7 +47,6 @@ func (s *StompSuite) Test_successful_unsubscribe_no_timeout(c *C) {
 	defer fc1.Close()
 	defer fc2.Close()
 
-	//client, err := Connect(fc1, ConnOpt.UnsubscribeTimeout(1*time.Second))
 	client, err := Connect(fc1)
 	c.Assert(err, IsNil)
 	c.Assert(client, NotNil)

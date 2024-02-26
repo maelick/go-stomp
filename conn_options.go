@@ -20,7 +20,7 @@ type connOptions struct {
 	MsgSendTimeout                            time.Duration
 	RcvReceiptTimeout                         time.Duration
 	DisconnectReceiptTimeout                  time.Duration
-	UnsubscribeTimeout                        time.Duration
+	UnsubscribeReceiptTimeout                 time.Duration
 	HeartBeatGracePeriodMultiplier            float64
 	Login, Passcode                           string
 	AcceptVersions                            []string
@@ -41,7 +41,7 @@ func newConnOptions(conn *Conn, opts []func(*Conn) error) (*connOptions, error) 
 		MsgSendTimeout:                 DefaultMsgSendTimeout,
 		RcvReceiptTimeout:              DefaultRcvReceiptTimeout,
 		DisconnectReceiptTimeout:       DefaultDisconnectReceiptTimeout,
-		UnsubscribeTimeout:             DefaultUnsubscribeTimeout,
+		UnsubscribeReceiptTimeout:      DefaultUnsubscribeReceiptTimeout,
 		Logger:                         log.StdLogger{},
 	}
 
@@ -158,10 +158,10 @@ var ConnOpt struct {
 	// avoid deadlocks. If this is not specified, the default is 30 seconds.
 	DisconnectReceiptTimeout func(disconnectReceiptTimeout time.Duration) func(*Conn) error
 
-	// UnsubscribeTimeout is a connect option that allows the client to specify
+	// UnsubscribeReceiptTimeout is a connect option that allows the client to specify
 	// how long to wait for a receipt in the Conn.Unsubscribe function. This helps
 	// avoid deadlocks. If this is not specified, the default is 30 seconds.
-	UnsubscribeTimeout func(unsubscribeTimeout time.Duration) func(*Conn) error
+	UnsubscribeReceiptTimeout func(unsubscribeReceiptTimeout time.Duration) func(*Conn) error
 
 	// HeartBeatGracePeriodMultiplier is used to calculate the effective read heart-beat timeout
 	// the broker will enforce for each client’s connection. The multiplier is applied to
@@ -269,9 +269,9 @@ func init() {
 		}
 	}
 
-	ConnOpt.UnsubscribeTimeout = func(unsubscribeTimeout time.Duration) func(*Conn) error {
+	ConnOpt.UnsubscribeReceiptTimeout = func(unsubscribeReceiptTimeout time.Duration) func(*Conn) error {
 		return func(c *Conn) error {
-			c.options.UnsubscribeTimeout = unsubscribeTimeout
+			c.options.UnsubscribeReceiptTimeout = unsubscribeReceiptTimeout
 			return nil
 		}
 	}
